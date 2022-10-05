@@ -47,25 +47,32 @@ void VideoEncNode::nodeProcess()
 
   while (!m_stopSignal && rclcpp::ok())
   {
+    std::shared_ptr<sensor_msgs::msg::Image> tmp_image;
     if(m_buffer.empty())
-      continue;
-
-    auto tmp_image = m_buffer.front();
+        continue;
+    {
+      std::lock_guard<std::mutex> lock(m_bufferMutex);
+      // RCLCPP_INFO(this->get_logger(), "m_buffer.size: [%d]", m_buffer.size());
+      tmp_image = m_buffer.front();
+      m_buffer.pop();
+    }
     auto image_msg = std::make_unique<sensor_msgs::msg::Image>(*tmp_image);
     image_msg->header.frame_id = "video_enc/image_h264";
     image_msg->encoding = "h264";
     m_pub->publish(std::move(image_msg));
-    m_buffer.pop();
   }
 
 }
 
 void VideoEncNode::subCallback(const std::shared_ptr<sensor_msgs::msg::Image> image)
 {
+  /*
   RCLCPP_INFO(this->get_logger(), "image->header.frame_id: [%s]", image->header.frame_id.c_str());
   RCLCPP_INFO(this->get_logger(), "image->encoding: [%s]", image->encoding.c_str());
   RCLCPP_INFO(this->get_logger(), "image->height: [%d]", image->height);
   RCLCPP_INFO(this->get_logger(), "image->width: [%d]", image->width);
+  */
+  std::lock_guard<std::mutex> lock(m_bufferMutex);
   m_buffer.push(image);
 }
 
