@@ -22,19 +22,7 @@ public:
     m_pub = create_publisher<sensor_msgs::msg::Image>("/carla/video_enc/image_h264", 10);
     m_pubThread = std::make_unique<std::thread>([this]() { nodeProcess(); });
 
-    auto callback =
-      [this](const std::shared_ptr<sensor_msgs::msg::Image> image) -> void
-      {
-        RCLCPP_INFO(this->get_logger(), "image->header.frame_id: [%s]", image->header.frame_id.c_str());
-        RCLCPP_INFO(this->get_logger(), "image->encoding: [%s]", image->encoding.c_str());
-        RCLCPP_INFO(this->get_logger(), "image->height: [%d]", image->height);
-        RCLCPP_INFO(this->get_logger(), "image->width: [%d]", image->width);
-        m_buffer.push(image);
-      };
-    // Create a subscription to the topic which can be matched with one or more compatible ROS
-    // publishers.
-    // Note that not all publishers on the same topic with the same type will be compatible:
-    // they must have compatible Quality of Service policies.
+    auto callback = [this](const std::shared_ptr<sensor_msgs::msg::Image> image){ subCallback(image); };
     m_sub = create_subscription<sensor_msgs::msg::Image>("/carla/ego_vehicle/rgb_view/image", 10, callback);
   }
 
@@ -50,6 +38,7 @@ private:
   std::unique_ptr<std::thread> m_pubThread;
   std::atomic<bool> m_stopSignal;
   void nodeProcess();
+  void subCallback(const std::shared_ptr<sensor_msgs::msg::Image> image);
 };
 
 void VideoEncNode::nodeProcess()
@@ -69,6 +58,15 @@ void VideoEncNode::nodeProcess()
     m_buffer.pop();
   }
 
+}
+
+void VideoEncNode::subCallback(const std::shared_ptr<sensor_msgs::msg::Image> image)
+{
+  RCLCPP_INFO(this->get_logger(), "image->header.frame_id: [%s]", image->header.frame_id.c_str());
+  RCLCPP_INFO(this->get_logger(), "image->encoding: [%s]", image->encoding.c_str());
+  RCLCPP_INFO(this->get_logger(), "image->height: [%d]", image->height);
+  RCLCPP_INFO(this->get_logger(), "image->width: [%d]", image->width);
+  m_buffer.push(image);
 }
 
 VideoEncNode::~VideoEncNode()
