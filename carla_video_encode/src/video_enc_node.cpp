@@ -5,8 +5,6 @@
 #include <queue>
 #include <thread>
 
-#include <unistd.h>
-
 namespace video_enc_node
 {
 
