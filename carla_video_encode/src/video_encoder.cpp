@@ -1,6 +1,5 @@
 #include "video_encoder.hpp"
 #include <iostream>
-#include <stdio.h>
 
 namespace video_enc_node
 {

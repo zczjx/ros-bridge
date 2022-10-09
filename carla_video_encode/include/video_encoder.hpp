@@ -4,12 +4,15 @@
 #include <vector>
 #include <thread>
 
+extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/opt.h>
 #include <libavutil/imgutils.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
+}
 
 #include "sensor_msgs/msg/image.hpp"
 
