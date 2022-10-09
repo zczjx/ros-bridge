@@ -1,6 +1,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
 #include "sensor_msgs/msg/image.hpp"
+#include "video_encoder.hpp"
 
 #include <queue>
 #include <thread>
@@ -17,6 +18,8 @@ public:
   {
     // Create a callback function for when messages are received.
     // Variations of this function also exist using, for example UniquePtr for zero-copy transport.
+    std::string codec_name("h264_nvenc");
+    m_encoder = std::make_shared<VideoEncoder>(codec_name);
     m_pub = create_publisher<sensor_msgs::msg::Image>("/carla/video_enc/image_h264", 10);
     m_pubThread = std::make_unique<std::thread>([this]() { nodeProcess(); });
 
@@ -29,6 +32,7 @@ public:
 private:
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr m_sub;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr m_pub;
+  std::shared_ptr<VideoEncoder> m_encoder;
 
   std::queue<std::shared_ptr<sensor_msgs::msg::Image>> m_buffer;
   std::mutex m_bufferMutex;
@@ -43,6 +47,17 @@ void VideoEncNode::nodeProcess()
 {
   RCLCPP_INFO(this->get_logger(), "video encode process thread started");
 
+  int pts_idx = 0;
+  std::string filename("carla_image.h264");
+  std::shared_ptr<FILE> file_hdl(fopen(filename.c_str(), "wb"));
+
+  if (nullptr == file_hdl)
+  {
+        std::cerr << "Could not open " << filename << std::endl;
+        exit(1);
+  }
+
+
   while (!m_stopSignal && rclcpp::ok())
   {
     std::shared_ptr<sensor_msgs::msg::Image> tmp_image;
@@ -54,10 +69,21 @@ void VideoEncNode::nodeProcess()
       tmp_image = m_buffer.front();
       m_buffer.pop();
     }
-    auto image_msg = std::make_unique<sensor_msgs::msg::Image>(*tmp_image);
-    image_msg->header.frame_id = "video_enc/image_h264";
-    image_msg->encoding = "h264";
-    m_pub->publish(std::move(image_msg));
+    auto image_msg = std::make_shared<sensor_msgs::msg::Image>(*tmp_image);
+    // image_msg->header.frame_id = "video_enc/image_h264";
+    // image_msg->encoding = "h264";
+    // m_pub->publish(std::move(image_msg));
+    if (pts_idx < 1000)
+    {
+      auto bgra_frame = m_encoder->fillinFrame(image_msg, pts_idx);
+      m_encoder->encode(bgra_frame, file_hdl);
+      pts_idx++;
+    }
+    else if(1000 == pts_idx)
+    {
+      m_encoder->flushEncode(file_hdl);
+      pts_idx++;
+    }
   }
 
 }

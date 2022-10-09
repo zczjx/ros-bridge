@@ -21,16 +21,58 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
-add_executable(video_enc_node src/video_enc_node.cpp)
+# find ffmpeg libs
+set(ffmpeg_libs_DIR /opt/ffmpeg/lib)
+set(ffmpeg_headers_DIR /opt/ffmpeg/include)
+
+include_directories(${ffmpeg_headers_DIR})
+link_directories(${ffmpeg_libs_DIR})
+
+find_package(PkgConfig REQUIRED)
+# pkg_check_modules(PC_AVFORMAT REQUIRED libavformat>=59)
+# pkg_check_modules(PC_AVFILTER REQUIRED libavfilter>=8)
+# pkg_check_modules(PC_AVCODEC REQUIRED libavcodec>=59)
+# pkg_check_modules(PC_AVUTIL REQUIRED libavutil>=57)
+# pkg_check_modules(PC_SWSCALE REQUIRED libswscale>=6)
+pkg_check_modules(ffmpeg_LIBRARIES REQUIRED IMPORTED_TARGET libavcodec libavformat libavutil)
+
+
+add_library(
+  video_encoder SHARED
+  src/video_encoder.cpp
+)
+
+target_include_directories(video_encoder PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+  ${ffmpeg_headers_DIR})
+ament_target_dependencies(
+  video_encoder
+  "rclcpp"
+  "std_msgs"
+  "sensor_msgs"
+)
+
+target_link_libraries(video_encoder avcodec avformat avutil)
+# target_link_libraries(video_encoder ${ffmpeg_LIBRARIES})
+
+add_executable(
+  video_enc_node
+  src/video_enc_node.cpp
+)
+
 target_include_directories(video_enc_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
+  $<INSTALL_INTERFACE:include>
+  ${ffmpeg_headers_DIR})
 ament_target_dependencies(
   video_enc_node
   "rclcpp"
   "std_msgs"
   "sensor_msgs"
 )
+# target_link_libraries(video_enc_node avcodec avfilter avformat avutil)
+target_link_libraries(video_enc_node video_encoder avcodec avformat avutil)
 
 install(TARGETS video_enc_node
   DESTINATION lib/${PROJECT_NAME})
