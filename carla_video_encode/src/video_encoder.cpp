@@ -35,8 +35,8 @@ VideoEncoder::VideoEncoder(std::string &codec_name)
     m_ctx->width = 800;
     m_ctx->height = 600;
     /* frames per second */
-    m_ctx->time_base = (AVRational){1, 25};
-    m_ctx->framerate = (AVRational){25, 1};
+    m_ctx->time_base = (AVRational){1, 20};
+    m_ctx->framerate = (AVRational){20, 1};
 
     /* emit one intra frame every ten frames
      * check frame pict_type before passing frame
@@ -46,7 +46,7 @@ VideoEncoder::VideoEncoder(std::string &codec_name)
      */
     m_ctx->gop_size = 10;
     m_ctx->max_b_frames = 1;
-    m_ctx->pix_fmt = AV_PIX_FMT_RGBA;
+    m_ctx->pix_fmt = AV_PIX_FMT_BGRA;
 
     if (m_codec->id == AV_CODEC_ID_H264)
         av_opt_set(m_ctx->priv_data, "preset", "slow", 0);
@@ -88,6 +88,7 @@ std::shared_ptr<AVFrame> VideoEncoder::fillinFrame(std::shared_ptr<sensor_msgs::
 
     size_t bytes = 4 * m_frame->width * m_frame->height;
     memcpy(m_frame->data[0], image_msg->data.data(), bytes);
+    m_frame->pts = pts_idx;
 
     return m_frame;
 
