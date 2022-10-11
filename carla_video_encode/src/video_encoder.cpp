@@ -1,3 +1,4 @@
+#include "rclcpp/rclcpp.hpp"
 #include "video_encoder.hpp"
 #include <iostream>
 
@@ -100,12 +101,41 @@ void VideoEncoder::flushEncode(std::shared_ptr<FILE> outfile)
     fclose(outfile.get());
 }
 
-/***
-void VideoEncoder::encode(std::shared_ptr<AVCodecContext> enc_ctx, std::shared_ptr<AVFrame> frame,
-        std::shared_ptr<AVPacket> pkt)
+
+void VideoEncoder::encode(std::shared_ptr<AVFrame> frame, std::queue<std::shared_ptr<sensor_msgs::msg::Image>> &out_buffer)
 {
+    int ret;
+
+    ret = avcodec_send_frame(m_ctx.get(), frame.get());
+
+    if (ret < 0)
+    {
+        std::cerr << "Error sending a frame for encoding" << std::endl;
+        exit(1);
+    }
+
+    while (ret >= 0)
+    {
+        ret = avcodec_receive_packet(m_ctx.get(), m_pkt.get());
+
+        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+            return;
+        else if (ret < 0)
+        {
+            std::cerr << "Error during encoding" << std::endl;
+            exit(1);
+        }
+
+        auto encode_msg = std::make_shared<sensor_msgs::msg::Image>();
+        encode_msg->header.frame_id = "video_enc/image_h264";
+        encode_msg->encoding = m_codec_name;
+        encode_msg->step = m_pkt->pts;
+        encode_msg->data.insert(encode_msg->data.end(), &m_pkt->data[0], &m_pkt->data[m_pkt->size]);
+        out_buffer.push(encode_msg);
+        av_packet_unref(m_pkt.get());
+    }
 }
-****/
+
 
 void VideoEncoder::encode(std::shared_ptr<AVFrame> frame, std::shared_ptr<FILE> outfile)
 {

@@ -21,7 +21,8 @@ public:
     std::string codec_name("h264_nvenc");
     m_encoder = std::make_shared<VideoEncoder>(codec_name);
     m_pub = create_publisher<sensor_msgs::msg::Image>("/carla/video_enc/image_h264", 10);
-    m_pubThread = std::make_unique<std::thread>([this]() { nodeProcess(); });
+    m_encodeThread = std::make_unique<std::thread>([this]() { doEncode(); });
+    m_pubThread = std::make_unique<std::thread>([this]() { doPublish(); });
 
     auto callback = [this](const std::shared_ptr<sensor_msgs::msg::Image> image){ subCallback(image); };
     m_sub = create_subscription<sensor_msgs::msg::Image>("/carla/ego_vehicle/rgb_view/image", 10, callback);
@@ -37,26 +38,21 @@ private:
   std::queue<std::shared_ptr<sensor_msgs::msg::Image>> m_buffer;
   std::mutex m_bufferMutex;
 
+  std::queue<std::shared_ptr<sensor_msgs::msg::Image>> m_encodeBuffer;
+  std::mutex m_encodeBufferMutex;
+
   std::unique_ptr<std::thread> m_pubThread;
+  std::unique_ptr<std::thread> m_encodeThread;
   std::atomic<bool> m_stopSignal;
-  void nodeProcess();
+  void doPublish();
+  void doEncode();
   void subCallback(const std::shared_ptr<sensor_msgs::msg::Image> image);
 };
 
-void VideoEncNode::nodeProcess()
+void VideoEncNode::doEncode()
 {
-  RCLCPP_INFO(this->get_logger(), "video encode process thread started");
-
+  RCLCPP_INFO(this->get_logger(), "video doEncode thread started");
   int pts_idx = 0;
-  std::string filename("carla_image.h264");
-  std::shared_ptr<FILE> file_hdl(fopen(filename.c_str(), "wb"));
-
-  if (nullptr == file_hdl)
-  {
-        std::cerr << "Could not open " << filename << std::endl;
-        exit(1);
-  }
-
 
   while (!m_stopSignal && rclcpp::ok())
   {
@@ -70,40 +66,46 @@ void VideoEncNode::nodeProcess()
       m_buffer.pop();
     }
     auto image_msg = std::make_shared<sensor_msgs::msg::Image>(*tmp_image);
-    // image_msg->header.frame_id = "video_enc/image_h264";
-    // image_msg->encoding = "h264";
-    // m_pub->publish(std::move(image_msg));
-    if (pts_idx < 1000)
-    {
-      auto bgra_frame = m_encoder->fillinFrame(image_msg, pts_idx);
-      m_encoder->encode(bgra_frame, file_hdl);
-      pts_idx++;
-    }
-    else if(1000 == pts_idx)
-    {
-      m_encoder->flushEncode(file_hdl);
-      pts_idx++;
-    }
+    auto bgra_frame = m_encoder->fillinFrame(image_msg, pts_idx);
+    m_encoder->encode(bgra_frame, m_encodeBuffer);
+    pts_idx++;
   }
 
 }
 
+void VideoEncNode::doPublish()
+{
+  RCLCPP_INFO(this->get_logger(), "video doPublish thread started");
+
+  while (!m_stopSignal && rclcpp::ok())
+  {
+    if(m_encodeBuffer.empty())
+      continue;
+
+    auto h264_msg = m_encodeBuffer.front();
+    m_encodeBuffer.pop();
+    m_pub->publish(std::move(*h264_msg));
+  }
+}
+
 void VideoEncNode::subCallback(const std::shared_ptr<sensor_msgs::msg::Image> image)
 {
-  /*
-  RCLCPP_INFO(this->get_logger(), "image->header.frame_id: [%s]", image->header.frame_id.c_str());
-  RCLCPP_INFO(this->get_logger(), "image->encoding: [%s]", image->encoding.c_str());
-  RCLCPP_INFO(this->get_logger(), "image->height: [%d]", image->height);
-  RCLCPP_INFO(this->get_logger(), "image->width: [%d]", image->width);
-  */
   std::lock_guard<std::mutex> lock(m_bufferMutex);
   m_buffer.push(image);
 }
 
 VideoEncNode::~VideoEncNode()
 {
+  if (m_encodeThread->joinable())
+  {
+    RCLCPP_INFO(this->get_logger(), "join m_encodeThread");
+    m_stopSignal = true;
+    m_encodeThread->join();
+  }
+
   if (m_pubThread->joinable())
   {
+    RCLCPP_INFO(this->get_logger(), "join m_pubThread");
     m_stopSignal = true;
     m_pubThread->join();
   }

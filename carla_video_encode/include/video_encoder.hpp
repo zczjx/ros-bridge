@@ -3,6 +3,7 @@
 #include <utility>
 #include <vector>
 #include <thread>
+#include <queue>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -28,7 +29,7 @@ public:
 
     void flushEncode(std::shared_ptr<FILE> outfile);
 
-    // void encode(std::shared_ptr<AVCodecContext> enc_ctx, std::shared_ptr<AVFrame> frame, std::shared_ptr<AVPacket> pkt);
+    void encode(std::shared_ptr<AVFrame> frame, std::queue<std::shared_ptr<sensor_msgs::msg::Image>> &out_buffer);
 
     void encode(std::shared_ptr<AVFrame> frame, std::shared_ptr<FILE> outfile);
 
