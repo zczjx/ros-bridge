@@ -1,58 +1,60 @@
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_components/register_node_macro.hpp"
 #include "sensor_msgs/msg/image.hpp"
-#include "video_encoder.hpp"
+#include "video_decoder.hpp"
 
 #include <queue>
 #include <thread>
 
-namespace video_enc_node
+namespace video_dec_node
 {
 
-class VideoEncNode : public rclcpp::Node
+class VideoDecNode : public rclcpp::Node
 {
 public:
 
-  VideoEncNode()
-  : Node("video_enc_node"), m_stopSignal(false)
+  VideoDecNode()
+  : Node("video_dec_node"), m_stopSignal(false)
   {
     // Create a callback function for when messages are received.
     // Variations of this function also exist using, for example UniquePtr for zero-copy transport.
-    std::string codec_name("h264_nvenc");
-    m_encoder = std::make_shared<VideoEncoder>(codec_name);
-    m_pub = create_publisher<sensor_msgs::msg::Image>("/carla/video_enc/image_h264", 10);
-    m_encodeThread = std::make_unique<std::thread>([this]() { doEncode(); });
+    std::string codec_name("h264_cuvid");
+    m_decoder = std::make_shared<VideoDecoder>(codec_name);
+    m_pub = create_publisher<sensor_msgs::msg::Image>("/carla/video_dec/image_bgra", 10);
+    m_decodeThread = std::make_unique<std::thread>([this]() { doDecode(); });
     m_pubThread = std::make_unique<std::thread>([this]() { doPublish(); });
 
     auto callback = [this](const std::shared_ptr<sensor_msgs::msg::Image> image){ subCallback(image); };
-    m_sub = create_subscription<sensor_msgs::msg::Image>("/carla/ego_vehicle/rgb_view/image", 10, callback);
+    m_sub = create_subscription<sensor_msgs::msg::Image>("/carla/video_enc/image_h264", 10, callback);
   }
 
-  ~VideoEncNode();
+  ~VideoDecNode();
 
 private:
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr m_sub;
   rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr m_pub;
-  std::shared_ptr<VideoEncoder> m_encoder;
+  std::shared_ptr<VideoDecoder> m_decoder;
 
   std::queue<std::shared_ptr<sensor_msgs::msg::Image>> m_buffer;
   std::mutex m_bufferMutex;
 
-  std::queue<std::shared_ptr<sensor_msgs::msg::Image>> m_encodeBuffer;
-  std::mutex m_encodeBufferMutex;
+  std::queue<std::shared_ptr<sensor_msgs::msg::Image>> m_decodeBuffer;
+  std::mutex m_decodeBufferMutex;
+
+  std::queue<std::shared_ptr<sensor_msgs::msg::Image>> m_rgbaPixelBuffer;
+  std::mutex m_pixelBufferMutex;
 
   std::unique_ptr<std::thread> m_pubThread;
-  std::unique_ptr<std::thread> m_encodeThread;
+  std::unique_ptr<std::thread> m_decodeThread;
   std::atomic<bool> m_stopSignal;
   void doPublish();
-  void doEncode();
+  void doDecode();
   void subCallback(const std::shared_ptr<sensor_msgs::msg::Image> image);
 };
 
-void VideoEncNode::doEncode()
+void VideoDecNode::doDecode()
 {
-  RCLCPP_INFO(this->get_logger(), "video doEncode thread started");
-  int pts_idx = 0;
+  RCLCPP_INFO(this->get_logger(), "video doDecode thread started");
 
   while (!m_stopSignal && rclcpp::ok())
   {
@@ -66,43 +68,40 @@ void VideoEncNode::doEncode()
       m_buffer.pop();
     }
     auto image_msg = std::make_shared<sensor_msgs::msg::Image>(*tmp_image);
-    auto bgra_frame = m_encoder->fillinFrame(image_msg, pts_idx);
-    m_encoder->encode(bgra_frame, m_encodeBuffer);
-    pts_idx++;
+    m_decoder->parseFrame(image_msg, image_msg->step);
+    m_decoder->decode(m_decodeBuffer);
   }
-
-  //TODO: flush encode
 
 }
 
-void VideoEncNode::doPublish()
+void VideoDecNode::doPublish()
 {
   RCLCPP_INFO(this->get_logger(), "video doPublish thread started");
 
   while (!m_stopSignal && rclcpp::ok())
   {
-    if(m_encodeBuffer.empty())
+    if(m_decodeBuffer.empty())
       continue;
 
-    auto h264_msg = m_encodeBuffer.front();
-    m_encodeBuffer.pop();
-    m_pub->publish(std::move(*h264_msg));
+    auto bgra_msg = m_decodeBuffer.front();
+    m_decodeBuffer.pop();
+    m_pub->publish(std::move(*bgra_msg));
   }
 }
 
-void VideoEncNode::subCallback(const std::shared_ptr<sensor_msgs::msg::Image> image)
+void VideoDecNode::subCallback(const std::shared_ptr<sensor_msgs::msg::Image> image)
 {
   std::lock_guard<std::mutex> lock(m_bufferMutex);
   m_buffer.push(image);
 }
 
-VideoEncNode::~VideoEncNode()
+VideoDecNode::~VideoDecNode()
 {
-  if (m_encodeThread->joinable())
+  if (m_decodeThread->joinable())
   {
-    RCLCPP_INFO(this->get_logger(), "join m_encodeThread");
+    RCLCPP_INFO(this->get_logger(), "join m_decodeThread");
     m_stopSignal = true;
-    m_encodeThread->join();
+    m_decodeThread->join();
   }
 
   if (m_pubThread->joinable())
@@ -122,7 +121,7 @@ int main(int argc, char **argv)
     rclcpp::init(argc, argv);
     //create new node
 
-    rclcpp::spin(std::make_shared<video_enc_node::VideoEncNode>());
+    rclcpp::spin(std::make_shared<video_dec_node::VideoDecNode>());
 
     //shutdown
     rclcpp::shutdown();
