@@ -36,8 +36,8 @@ VideoEncoder::VideoEncoder(std::string &codec_name)
     m_ctx->width = 800;
     m_ctx->height = 600;
     /* frames per second */
-    m_ctx->time_base = (AVRational){1, 20};
-    m_ctx->framerate = (AVRational){20, 1};
+    m_ctx->time_base = (AVRational){1, 30};
+    m_ctx->framerate = (AVRational){30, 1};
 
     /* emit one intra frame every ten frames
      * check frame pict_type before passing frame

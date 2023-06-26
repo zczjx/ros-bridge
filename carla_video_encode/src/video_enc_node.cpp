@@ -66,6 +66,7 @@ void VideoEncNode::doEncode()
       m_buffer.pop();
     }
     auto image_msg = std::make_shared<sensor_msgs::msg::Image>(*tmp_image);
+    // RCLCPP_INFO(this->get_logger(), "image_msg->data.size(): [%d]", image_msg->data.size());
     auto bgra_frame = m_encoder->fillinFrame(image_msg, pts_idx);
     m_encoder->encode(bgra_frame, m_encodeBuffer);
     pts_idx++;

@@ -32,7 +32,7 @@ def generate_launch_description():
         ),
         launch.actions.DeclareLaunchArgument(
             name='town',
-            default_value='Town03'
+            default_value='Town06'
         ),
         launch.actions.DeclareLaunchArgument(
             name='passive',
@@ -44,7 +44,7 @@ def generate_launch_description():
         ),
         launch.actions.DeclareLaunchArgument(
             name='fixed_delta_seconds',
-            default_value='0.05'
+            default_value='0.033'
         ),
         launch.actions.IncludeLaunchDescription(
             launch.launch_description_sources.PythonLaunchDescriptionSource(
