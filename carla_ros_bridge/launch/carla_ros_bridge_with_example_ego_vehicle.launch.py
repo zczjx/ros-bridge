@@ -16,7 +16,7 @@ def generate_launch_description():
         ),
         launch.actions.DeclareLaunchArgument(
             name='timeout',
-            default_value='30'
+            default_value='50'
         ),
         launch.actions.DeclareLaunchArgument(
             name='role_name',
@@ -32,11 +32,16 @@ def generate_launch_description():
         ),
         launch.actions.DeclareLaunchArgument(
             name='town',
-            default_value='Town06'
+            default_value='Town10HD_Opt'
         ),
         launch.actions.DeclareLaunchArgument(
             name='passive',
             default_value='False'
+        ),
+        launch.actions.DeclareLaunchArgument(
+            name='synchronous_mode',
+            default_value='False',
+            description='Enable/disable synchronous mode. If enabled, the ROS bridge waits until the expected data is received for all sensors'
         ),
         launch.actions.DeclareLaunchArgument(
             name='synchronous_mode_wait_for_vehicle_control_command',
@@ -57,6 +62,7 @@ def generate_launch_description():
                 'town': launch.substitutions.LaunchConfiguration('town'),
                 'timeout': launch.substitutions.LaunchConfiguration('timeout'),
                 'passive': launch.substitutions.LaunchConfiguration('passive'),
+                'synchronous_mode': launch.substitutions.LaunchConfiguration('synchronous_mode'),
                 'synchronous_mode_wait_for_vehicle_control_command': launch.substitutions.LaunchConfiguration('synchronous_mode_wait_for_vehicle_control_command'),
                 'fixed_delta_seconds': launch.substitutions.LaunchConfiguration('fixed_delta_seconds')
             }.items()
