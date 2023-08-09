@@ -22,7 +22,7 @@
             "id": "map"
         },
         {
-            "type": "vehicle.lincoln.mkz_2020",
+            "type": "vehicle.tesla.model3",
             "id": "ego_vehicle",
             "sensors":
             [
@@ -32,71 +32,47 @@
                     "spawn_point": {"x": 2.0, "y": 0.0, "z": 2.0, "roll": 0.0, "pitch": 0.0, "yaw": 0.0},
                     "image_size_x": 800,
                     "image_size_y": 600,
-                    "fov": 90.0
+                    "fov": 90
                 },
                 {
                     "type": "sensor.camera.rgb",
-                    "id": "front_fisheye_200fov",
-                    "spawn_point": {"x": 4.164, "y": 0.0, "z": 0.6, "roll": 0.0, "pitch": 12.0, "yaw": -7.0},
-                    "image_size_x": 800,
-                    "image_size_y": 600,
-                    "fov": 200.0
-                },
-                {
-                    "type": "sensor.camera.rgb",
-                    "id": "front_tele_30fov",
-                    "spawn_point": {"x": 2.0, "y": 0.1, "z": 1.345, "roll": 0.0, "pitch": 0.0, "yaw": -7.0},
-                    "image_size_x": 800,
-                    "image_size_y": 600,
-                    "fov": 30.0
-                },
-                {
-                    "type": "sensor.camera.rgb",
-                    "id": "front_wide_120fov",
-                    "spawn_point": {"x": 2.0, "y": 0.0425, "z": 1.345, "roll": 0.0, "pitch": 0.0, "yaw": 0.0},
+                    "id": "front_center_120fov",
+                    "spawn_point": {"x": 1.77, "y": 0.0, "z": 1.47, "roll": 0.0, "pitch": 0.0, "yaw": 0.0},
                     "image_size_x": 800,
                     "image_size_y": 600,
                     "fov": 120
                 },
                 {
                     "type": "sensor.camera.rgb",
-                    "id": "left_fisheye_200fov",
-                    "spawn_point": {"x": 2.13, "y": 1.06, "z": 1.03, "roll": 0.0, "pitch": 20.0, "yaw": 84.0},
+                    "id": "front_center_60fov",
+                    "spawn_point": {"x": 1.75, "y": 0.1, "z": 1.47, "roll": 0.0, "pitch": 0.0, "yaw": 0},
                     "image_size_x": 800,
                     "image_size_y": 600,
-                    "fov": 200
+                    "fov": 60
                 },
                 {
                     "type": "sensor.camera.rgb",
-                    "id": "rear_fisheye_200fov",
-                    "spawn_point": {"x": -1.14, "y": 0.055, "z": 0.9, "roll": 0.0, "pitch": 10.0, "yaw": -180.0},
+                    "id": "rear_center_60fov",
+                    "spawn_point": {"x": -1.461, "y": 0.0, "z": 1.485, "roll": 0.0, "pitch": 0.0, "yaw": 180.0},
                     "image_size_x": 800,
                     "image_size_y": 600,
-                    "fov": 200
+                    "fov": 60
                 },
                 {
                     "type": "sensor.camera.rgb",
-                    "id": "rear_left_70fov",
-                    "spawn_point": {"x": -2.12, "y": 1.05, "z": 1.14, "roll": 0.0, "pitch": 0.0, "yaw": 150.0},
+                    "id": "rear_left_120fov",
+                    "spawn_point": {"x": -1.289, "y": 0.654, "z": 1.485, "roll": 0.0, "pitch": 0.0, "yaw": 120.0},
                     "image_size_x": 800,
                     "image_size_y": 600,
-                    "fov": 70
+                    "fov": 120
                 },
                 {
                     "type": "sensor.camera.rgb",
-                    "id": "rear_right_70fov",
-                    "spawn_point": {"x": -2.1, "y": -1.03, "z": 1.14, "roll": 0.0, "pitch": 0.0, "yaw": -150.0},
+                    "id": "rear_right_120fov",
+                    "spawn_point": {"x": -1.298, "y": -0.654, "z": 1.485, "roll": 0.0, "pitch": 0.0, "yaw": -120.0},
                     "image_size_x": 800,
                     "image_size_y": 600,
-                    "fov": 70
-                },
-                {
-                    "type": "sensor.camera.rgb",
-                    "id": "right_fisheye_200fov",
-                    "spawn_point": {"x": 2.1, "y": -1.04, "z": 1.03, "roll": 0.0, "pitch": 20.0, "yaw": -95.0},
-                    "image_size_x": 800,
-                    "image_size_y": 600,
-                    "fov": 200
+                    "fov": 120
                 },
                 {
                     "type": "sensor.camera.rgb",
