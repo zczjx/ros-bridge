@@ -3,6 +3,7 @@ import sys
 
 import launch
 import launch_ros.actions
+from ament_index_python.packages import get_package_share_directory
 
 
 def generate_launch_description():
@@ -10,6 +11,11 @@ def generate_launch_description():
         launch.actions.DeclareLaunchArgument(
             name='role_name',
             default_value='ego_vehicle'
+        ),
+        launch.actions.DeclareLaunchArgument(
+            name='objects_definition_file',
+            default_value=get_package_share_directory(
+                'carla_spawn_objects') + '/config/objects.json'
         ),
         launch_ros.actions.Node(
             package='carla_manual_control',
@@ -19,7 +25,8 @@ def generate_launch_description():
             emulate_tty=True,
             parameters=[
                 {
-                    'role_name': launch.substitutions.LaunchConfiguration('role_name')
+                    'role_name': launch.substitutions.LaunchConfiguration('role_name'),
+                    'objects_definition_file': launch.substitutions.LaunchConfiguration('objects_definition_file')
                 }
             ]
         )

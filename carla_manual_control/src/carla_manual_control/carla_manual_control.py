@@ -29,7 +29,9 @@ Use ARROWS or WASD keys for control.
 from __future__ import print_function
 
 import datetime
+import json
 import math
+import os
 from threading import Thread
 
 import numpy
@@ -70,6 +72,7 @@ from carla_msgs.msg import CarlaEgoVehicleStatus
 from carla_msgs.msg import CarlaEgoVehicleControl
 from carla_msgs.msg import CarlaLaneInvasionEvent
 from carla_msgs.msg import CarlaCollisionEvent
+from carla_msgs.srv import VehicleRig
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import NavSatFix
@@ -89,8 +92,12 @@ class ManualControl(CompatibleNode):
         super(ManualControl, self).__init__("ManualControl")
         self._surface = None
         self.role_name = self.get_param("role_name", "ego_vehicle")
+        self.objects_definition_file = self.get_param("objects_definition_file", "")
+        self.load_rig_file(objects_definition_file=self.objects_definition_file)
         self.hud = HUD(self.role_name, resolution['width'], resolution['height'], self)
         self.controller = KeyboardControl(self.role_name, self.hud, self)
+        self.vehicle_rig_service = self.new_service(VehicleRig, "/vehicle/rig",
+                                                     self.vehicle_rig)
 
         self.image_subscriber = self.new_subscription(
             Image, "/carla/{}/rgb_view/image".format(self.role_name),
@@ -103,6 +110,21 @@ class ManualControl(CompatibleNode):
         self.lane_invasion_subscriber = self.new_subscription(
             CarlaLaneInvasionEvent, "/carla/{}/lane_invasion".format(self.role_name),
             self.on_lane_invasion, qos_profile=10)
+
+    def vehicle_rig(self, req, response=None):
+        response = roscomp.get_service_response(VehicleRig)
+        response.rig = self.vehicle_rig_str
+        return response
+
+    def load_rig_file(self, objects_definition_file=""):
+        if not objects_definition_file or not os.path.exists(objects_definition_file):
+            raise RuntimeError("Could not read object definitions from {}".format(objects_definition_file))
+        with open(objects_definition_file) as handle:
+            json_actors = json.loads(handle.read())
+            for actor in json_actors["objects"]:
+                actor_type = actor["type"].split('.')[0]
+                if actor_type == "vehicle":
+                    self.vehicle_rig_str = str(actor)
 
     def on_collision(self, data):
         """
